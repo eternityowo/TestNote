@@ -14,7 +14,7 @@ namespace TestNote.DAL
     public class BaseRepository<TEntity> : IBaseRepository<TEntity>
            where TEntity : class
     {
-        protected INoteDBContext Context { get; private set; }
+        protected DbContext _context { get; private set; }
         protected DbSet<TEntity> DbSet { get; set; }
 
         public IQueryable<TEntity> All
@@ -22,12 +22,12 @@ namespace TestNote.DAL
             get { return DbSet; }
         }
 
-        public BaseRepository(INoteDBContext dbContext)
+        public BaseRepository(DbContext dbContext)
         {
             if (dbContext != null)
             {
-                Context = dbContext;
-                DbSet = Context.DbContext.Set<TEntity>();
+                _context = dbContext;
+                DbSet = _context.Set<TEntity>();
             }
             else
             {
@@ -82,7 +82,7 @@ namespace TestNote.DAL
                 baseEntity.Id = Guid.NewGuid();
             }
 
-            var dbEntityEntry = Context.DbContext.Entry(entity);
+            var dbEntityEntry = _context.Entry(entity);
             if (dbEntityEntry.State != EntityState.Detached)
             {
                 dbEntityEntry.State = EntityState.Added;
@@ -95,7 +95,7 @@ namespace TestNote.DAL
 
         public virtual void Update(TEntity entity)
         {
-            var dbEntityEntry = Context.DbContext.Entry(entity);
+            var dbEntityEntry = _context.Entry(entity);
             if (dbEntityEntry.State == EntityState.Detached)
             {
                 DbSet.Attach(entity);
@@ -105,7 +105,7 @@ namespace TestNote.DAL
 
         public virtual void Delete(TEntity entity)
         {
-            var dbEntityEntry = Context.DbContext.Entry(entity);
+            var dbEntityEntry = _context.Entry(entity);
             if (dbEntityEntry.State != EntityState.Deleted)
             {
                 dbEntityEntry.State = EntityState.Deleted;
@@ -134,11 +134,6 @@ namespace TestNote.DAL
         public void DeleteRange(IEnumerable<TEntity> entities)
         {
             DbSet.RemoveRange(entities);
-        }
-
-        public List<NoteModel> Get(out int total, string v1, int v2, int maxValue, bool v3, Func<object, object> p)
-        {
-            throw new NotImplementedException();
         }
     }
 }

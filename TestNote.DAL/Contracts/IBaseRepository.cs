@@ -22,6 +22,5 @@ namespace TestNote.DAL.Contracts
         void Delete(Guid id);
         void DeleteRange(IEnumerable<T> entities);
         bool Exists(Guid id);
-        List<NoteModel> Get(out int total, string v1, int v2, int maxValue, bool v3, Func<object, object> p);
     }
 }

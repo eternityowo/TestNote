@@ -16,6 +16,7 @@ using TestNote.Service.Contracts;
 using TestNote.Service.Service;
 using TestNote.WEB.Hubs;
 using DataTables.AspNet.AspNetCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace TestNote.WEB
 {
@@ -31,6 +32,9 @@ namespace TestNote.WEB
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddDbContext<DbContext, NoteDBContext>(options =>
+             options.UseSqlServer(
+                 Configuration.GetConnectionString("DefaultConnection")));
 
             services.AddSignalR();
 
@@ -48,10 +52,9 @@ namespace TestNote.WEB
             // inject counter and rules stores
             services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
             services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
-
-            services.AddSingleton<IUnitOfWork, UnitOfWork>();
-            services.AddSingleton<INoteDBContext, NoteDBContext>();
             services.AddSingleton<IEntityGuidConverter, EntityGuidConverter>();
+
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<INoteService, NoteService>();
             services.AddScoped<IUserSerivce, UserService>();
 

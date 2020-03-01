@@ -6,32 +6,32 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using TestNote.DAL.Contracts;
 
 namespace TestNote.DAL
 {
-    public class UnitOfWork : IUnitOfWork
+    public class UnitOfWork : IUnitOfWork, IDisposable
     {
-        private readonly Dictionary<Type, IBaseRepository> _repositories;
+        private readonly DbContext _context;
+        private readonly IDictionary<Type, IBaseRepository> _repositories;
         private readonly object _lockObject = new object();
 
-        public INoteDBContext Context { get; private set; }
-
-        public UnitOfWork(INoteDBContext context)
+        public UnitOfWork(DbContext context)
         {
             _repositories = new Dictionary<Type, IBaseRepository>();
-            Context = context;
+            _context = context;
         }
 
         public IBaseRepository<T> GetRepository<T>()
         {
-            // Check if repository exist in cache
+            //Check if repository exist in cache
             if (_repositories.ContainsKey(typeof(T)))
                 return _repositories[typeof(T)] as IBaseRepository<T>;
 
             // If not then create a new instance and add to cache
             var repositoryType = typeof(BaseRepository<>).MakeGenericType(typeof(T));
-            var repository = (IBaseRepository<T>)Activator.CreateInstance(repositoryType, Context);
+            var repository = (IBaseRepository<T>)Activator.CreateInstance(repositoryType, _context);
             _repositories.Add(typeof(T), repository);
 
             return repository;
@@ -39,7 +39,7 @@ namespace TestNote.DAL
 
         public void RollBack()
         {
-            var changedEntries = Context.DbContext.ChangeTracker.Entries().Where(x => x.State != EntityState.Unchanged).ToList();
+            var changedEntries = _context.ChangeTracker.Entries().Where(x => x.State != EntityState.Unchanged).ToList();
 
             foreach (var entry in changedEntries.Where(x => x.State == EntityState.Modified))
             {
@@ -57,25 +57,42 @@ namespace TestNote.DAL
                 entry.State = EntityState.Unchanged;
             }
         }
+        public Task<int> SaveChangesAsync()
+        {
+            var entities = ((NoteDBContext)_context).ChangeTracker
+                .Entries()
+                .Where(_ => _.State == EntityState.Added ||
+                            _.State == EntityState.Modified);
+
+            var errors = new List<ValidationResult>(); // all errors are here
+            foreach (var entity in entities)
+            {
+                var validationContext = new ValidationContext(entity);
+                Validator.TryValidateObject(entity, validationContext, errors, validateAllProperties: true);
+            }
+
+            return _context.SaveChangesAsync();
+        }
 
         public int SaveChanges()
         {
             try
             {
                 Monitor.Enter(_lockObject);
-                Context.DbContext.SaveChanges();
 
-                var entities = from e in ((NoteDBContext)Context).ChangeTracker.Entries()
-                               where e.State == EntityState.Added
-                                   || e.State == EntityState.Modified
-                               select e.Entity;
+                var entities = _context.ChangeTracker
+                    .Entries()
+                    .Where(_ => _.State == EntityState.Added ||
+                                _.State == EntityState.Modified);
+
+                var errors = new List<ValidationResult>(); // all errors are here
                 foreach (var entity in entities)
                 {
                     var validationContext = new ValidationContext(entity);
-                    Validator.ValidateObject(entity, validationContext);
+                    Validator.TryValidateObject(entity, validationContext, errors, validateAllProperties: true);
                 }
 
-                return ((NoteDBContext)Context).SaveChanges();
+                return _context.SaveChanges();
             }
             catch (DbUpdateException ex)
             {
@@ -85,7 +102,33 @@ namespace TestNote.DAL
             {
                 Monitor.Exit(_lockObject);
             }
-
         }
+
+        #region IDisposable
+
+        private bool _disposed;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    if (_context != null)
+                    {
+                        _context.Dispose();
+                    }
+                }
+            }
+            _disposed = true;
+        }
+
+        #endregion
     }
 }
