@@ -1,9 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Threading.Tasks;
 using TestNote.DAL.Contracts;
 using TestNote.DAL.Entities;
 using TestNote.DAL.Extensions;
@@ -11,50 +13,26 @@ using TestNote.DAL.Models;
 
 namespace TestNote.DAL
 {
-    public class BaseRepository<TEntity> : IBaseRepository<TEntity>
-           where TEntity : class
+    public class BaseRepository<TEntity> : IBaseRepository<TEntity> where TEntity : class
     {
         protected DbContext _context { get; private set; }
-        protected DbSet<TEntity> DbSet { get; set; }
+        public BaseRepository(DbContext dbContext) => _context = dbContext;
 
-        public IQueryable<TEntity> All
-        {
-            get { return DbSet; }
-        }
-
-        public BaseRepository(DbContext dbContext)
-        {
-            if (dbContext != null)
-            {
-                _context = dbContext;
-                DbSet = _context.Set<TEntity>();
-            }
-            else
-            {
-                throw new ArgumentNullException(nameof(dbContext));
-            }
-        }
-
-
+        public IQueryable<TEntity> All() => 
+            _context.Set<TEntity>();
         public IQueryable<TEntity> AllIncluding(params Expression<Func<TEntity, object>>[] includeProperties)
         {
-            var query = All;
+            var query = All();
             foreach (var includeProperty in includeProperties)
             {
                 query = query.Include(includeProperty);
             }
             return query;
         }
-
-        public TEntity GetById(Guid id)
-        {
-            return DbSet.Find(id);
-        }
-
         public IQueryable<TEntity> Get(out int total, string orderBy, int skip, int take = 0,
             bool descOrder = true, IEnumerable<Expression<Func<TEntity, bool>>> conditions = null)
         {
-            var query = All;
+            var query = All();
 
             if (conditions != null)
             {
@@ -74,66 +52,20 @@ namespace TestNote.DAL
             return query;
         }
 
-        public virtual void Add(TEntity entity)
-        {
-            var baseEntity = entity as BaseEntity;
-            if (baseEntity != null && baseEntity.Id == Guid.Empty)
-            {
-                baseEntity.Id = Guid.NewGuid();
-            }
+        public TEntity GetById(Guid id) => _context.Find<TEntity>(id);
+        public ValueTask<TEntity> GetByIdAsync(Guid id) => _context.FindAsync<TEntity>(id);
+        public bool Exists(Guid id) => _context.Find<TEntity>(id) != null;
 
-            var dbEntityEntry = _context.Entry(entity);
-            if (dbEntityEntry.State != EntityState.Detached)
-            {
-                dbEntityEntry.State = EntityState.Added;
-            }
-            else
-            {
-                DbSet.Add(entity);
-            }
-        }
+        public ValueTask<EntityEntry<TEntity>> InsertAsync(TEntity entity) => _context.AddAsync(entity);
+        public Task InsertAsync(IEnumerable<TEntity> entities) => _context.AddRangeAsync(entities);
+        public void Insert(TEntity entity) => _context.Add(entity);
+        public void Insert(IEnumerable<TEntity> entities) => _context.AddRange(entities);
 
-        public virtual void Update(TEntity entity)
-        {
-            var dbEntityEntry = _context.Entry(entity);
-            if (dbEntityEntry.State == EntityState.Detached)
-            {
-                DbSet.Attach(entity);
-            }
-            dbEntityEntry.State = EntityState.Modified;
-        }
+        public void Update(TEntity entity) => _context.Update(entity);
+        public void Update(IEnumerable<TEntity> entities) => _context.UpdateRange(entities);
 
-        public virtual void Delete(TEntity entity)
-        {
-            var dbEntityEntry = _context.Entry(entity);
-            if (dbEntityEntry.State != EntityState.Deleted)
-            {
-                dbEntityEntry.State = EntityState.Deleted;
-            }
-            else
-            {
-                DbSet.Attach(entity);
-                DbSet.Remove(entity);
-            }
-        }
-
-        public bool Exists(Guid id)
-        {           
-            return DbSet.Find(id) != null;
-        }
-
-        public virtual void Delete(Guid id)
-        {
-            var entity = GetById(id);
-            if (entity == null)
-                return;
-
-            Delete(entity);
-        }
-
-        public void DeleteRange(IEnumerable<TEntity> entities)
-        {
-            DbSet.RemoveRange(entities);
-        }
+        public void Delete(TEntity entity) => _context.Remove(entity);
+        public void Delete(IEnumerable<TEntity> entities) => _context.RemoveRange(entities);
+        public void Delete(params object[] id) => _context.Remove(_context.Find<TEntity>(id));
     }
 }

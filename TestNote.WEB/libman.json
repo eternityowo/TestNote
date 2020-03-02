@@ -27,6 +27,14 @@
         "dist/jquery.unobtrusive-ajax.js",
         "dist/jquery.unobtrusive-ajax.min.js"
       ]
+    },
+    {
+      "library": "bootstrap-notify@0.2.0",
+      "destination": "wwwroot/lib/bootstrap-notify/"
+    },
+    {
+      "library": "mouse0270-bootstrap-notify@3.1.7",
+      "destination": "wwwroot/lib/bootstrap-notify/"
     }
   ]
 }

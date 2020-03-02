@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using TestNote.DAL.Models;
 
 namespace TestNote.Service.Contracts
 {
     public interface INoteService
     {
-        List<NoteModel> GetNotes(DateTime startDate, DateTime endDate);
-        List<NoteModel> GetNotesWithUser(DateTime startDate, DateTime endDate);
-        List<NoteModel> GetNotesByUserId(string id);
-        NoteModel GetNote(string id);
-        IServiceResult UpdateNote(NoteModel note);
-        IServiceResult DeleteNote(string id);
+        Task<List<NoteModel>> GetNotesAsync(DateTime startDate, DateTime endDate);
+        Task<List<NoteModel>> GetNotesByUserIdAsync(Guid id);
+        Task<NoteModel> GetNoteAsync(Guid id);
+        Task<IServiceResult> AddNoteAsync(NoteModel note);
+        Task<IServiceResult> DeleteNoteAsync(Guid id);
     }
 }

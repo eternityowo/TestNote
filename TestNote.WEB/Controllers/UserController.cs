@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using DataTables.AspNet.Core;
 using TestNote.Service.Contracts;
 using TestNote.Service.Service;
+using System;
 
 namespace TestNote.WEB.Controllers
 {
@@ -26,86 +27,45 @@ namespace TestNote.WEB.Controllers
             return View();
         }
 
-        public JsonResult GetList(DataTables.AspNet.Core.IDataTablesRequest request)
+        public async Task<JsonResult> GetList(DataTables.AspNet.Core.IDataTablesRequest request)
         {
-            var users = _userService.GetUsers()/*.Where(user => user.Ip.StartsWith(request.Search.Value)).ToList()*/;
+            var timeOffSet = Request.Cookies.FirstOrDefault(c => c.Key == "timezoneoffset").Value;
+            var offset = int.Parse(timeOffSet.ToString());
+
+            var users = await _userService.GetUsersAsync();
+
+            if (request.Search.Value != null)
+            {
+                users = users.Where(u => u.Ip.StartsWith(request.Search.Value)).ToList();
+            }
+
+
+            foreach (var u in users)
+            {
+                u.BlockDate = u.BlockDate?.AddMinutes((-1) * offset);
+            }
 
             return Json(new { draw = request.Draw, recordsFiltered = users.Count, recordsTotal = users.Count, data = users });
         }
 
-        // GET: User/Details/5
-        public ActionResult Details(int id)
+        public async Task<JsonResult> ChangeUserStatus()
         {
-            return View();
-        }
+            var userModel = await _userService.GetUserByIpAsync(HttpContext.Connection.RemoteIpAddress.ToString());
+            if (userModel == null)
+                return Json(new { data = "null", errorMessage = "Something went wrong, user not found" });
 
-        // GET: User/Create
-        public ActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: User/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
-        {
-            try
+            if(userModel.BlockDate.HasValue)
             {
-                // TODO: Add insert logic here
-
-                return RedirectToAction(nameof(Index));
+                userModel.BlockDate = null;
             }
-            catch
+            else
             {
-                return View();
+                userModel.BlockDate = DateTime.UtcNow;
             }
-        }
 
-        // GET: User/Edit/5
-        public ActionResult Edit(int id)
-        {
-            return View();
-        }
+            await _userService.UpdateUserAsycn(userModel);
 
-        // POST: User/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
-        {
-            try
-            {
-                // TODO: Add update logic here
-
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }
-
-        // GET: User/Delete/5
-        public ActionResult Delete(int id)
-        {
-            return View();
-        }
-
-        // POST: User/Delete/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
-        {
-            try
-            {
-                // TODO: Add delete logic here
-
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
+            return Json(new { data = "success" });
         }
     }
 }

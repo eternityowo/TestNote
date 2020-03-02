@@ -10,6 +10,7 @@ namespace TestNote.DAL.Models
         [Required]
         public string Content { get; set; }
         public DateTime? CreateDate { get; set; }
-        public UserModel User { get; set; }
+        public Guid? UserId { get; set; }
+        public string UserName { get; set; }
     }
 }

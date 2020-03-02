@@ -1,7 +1,9 @@
-﻿namespace TestNote.DAL.Models
+﻿using System;
+
+namespace TestNote.DAL.Models
 {
     public class BaseModel
     {
-        public string Id { get; set; }
+        public Guid Id { get; set; }
     }
 }

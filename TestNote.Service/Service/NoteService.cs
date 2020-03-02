@@ -1,137 +1,74 @@
-﻿using System;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using TestNote.DAL;
 using TestNote.DAL.Contracts;
 using TestNote.DAL.Entities;
 using TestNote.DAL.Models;
 using TestNote.Service.Contracts;
+using AutoMapper.QueryableExtensions;
 
 namespace TestNote.Service.Service
 {
     public class NoteService : BaseService, INoteService
     {
-        public NoteService(IUnitOfWork unitOfWork, IEntityGuidConverter entityGuidConverter)
-            : base(unitOfWork, entityGuidConverter)
+        public NoteService(IUnitOfWork unitOfWork, IMapper mapper)
+            : base(unitOfWork, mapper)
         {
         }
-
-        public List<NoteModel> GetNotes(DateTime startDate, DateTime endDate)
+        public Task<NoteModel> GetNoteAsync(Guid id)
         {
-            return UnitOfWork.GetRepository<Notes>().All
+            return UnitOfWork.GetRepository<Notes>().All()
+                .Where(note => note.Id == id)
+                .ProjectTo<NoteModel>(_mapper.ConfigurationProvider)
+                .FirstOrDefaultAsync();
+        }
+
+        public Task<List<NoteModel>> GetNotesAsync(DateTime startDate, DateTime endDate)
+        {
+            return UnitOfWork.GetRepository<Notes>().All()
                 .Where(note => note.CreateDate >= startDate.Date && note.CreateDate <= endDate.Date)
-                .Select(note => new
-                {
-                    note.Id,
-                    note.Content,
-                    note.CreateDate,
-            }).ToList()
-            .Select(note => new NoteModel
-            {
-                Id = EntityGuidConverter.ConvertToPrefixedGuid(typeof(Notes), note.Id),
-                Content = note.Content,
-                CreateDate = note.CreateDate
-            }).ToList();
+                .ProjectTo<NoteModel>(_mapper.ConfigurationProvider)
+                .ToListAsync();
         }
 
-        public List<NoteModel> GetNotesWithUser(DateTime startDate, DateTime endDate)
+        public Task<List<NoteModel>> GetNotesByUserIdAsync(Guid id)
         {
-            return UnitOfWork.GetRepository<Notes>().AllIncluding(note => note.User)
-                .Where(note => note.CreateDate >= startDate.Date && note.CreateDate <= endDate.Date)
-                .Select(note => new
-                {
-                    note.Id,
-                    note.Content,
-                    note.CreateDate,
-                    note.User
-                }).ToList()
-                .Select(note => new NoteModel
-                {
-                    Id = EntityGuidConverter.ConvertToPrefixedGuid(typeof(Notes), note.Id),
-                    Content = note.Content,
-                    CreateDate = note.CreateDate,
-                    User = new UserModel() { Ip = note.User.Ip, UserName = note.User.UserName, BlockDate = note.User.BlockDate}
-                }).ToList();
+            return UnitOfWork.GetRepository<Notes>().All()
+                .Where(note => note.UserId.Value == id)
+                .ProjectTo<NoteModel>(_mapper.ConfigurationProvider)
+                .ToListAsync();
         }
 
-        public NoteModel GetNote(string id)
+        public async Task<IServiceResult> AddNoteAsync(NoteModel noteModel)
         {
-            var note = UnitOfWork.GetRepository<Notes>().GetById(EntityGuidConverter.ConvertToGuid(id));
+            var note = _mapper.Map<Notes>(noteModel);
+            //note.User = null;
+            await UnitOfWork.GetRepository<Notes>().InsertAsync(note);
+            await UnitOfWork.SaveChangesAsync();
 
-            return (note == null) ? null : new NoteModel
-            {
-                Id = EntityGuidConverter.ConvertToPrefixedGuid(typeof(Notes), note.Id),
-                Content = note.Content,
-                CreateDate = note.CreateDate
-            };
+            var resultEntry = await UnitOfWork.GetRepository<Notes>().AllIncluding(_ => _.User)
+                .Where(_ => _.Id == note.Id)
+                .FirstOrDefaultAsync();
+            return SuccessResult(_mapper.Map<NoteModel>(resultEntry));
         }
 
-        public IServiceResult AddNote(NoteModel note)
+
+        public async Task<IServiceResult> DeleteNoteAsync(Guid id)
         {
-            var noteAdded = new Notes
-            {
-                CreateDate = note.CreateDate,
-                Content = note.Content,
-                UserId = EntityGuidConverter.ConvertToGuid(note.User.Id),
-            };
-
-            UnitOfWork.GetRepository<Notes>().Add(noteAdded);
-            UnitOfWork.SaveChanges();
-
-            var resultEntry = GetNote(EntityGuidConverter.ConvertToPrefixedGuid(typeof(Notes), noteAdded.Id));
-            return SuccessResult(resultEntry);
-        }
-
-        public IServiceResult UpdateNote(NoteModel note)
-        {
-            var noteRepository = UnitOfWork.GetRepository<Notes>();
-            var noteUpdated = noteRepository.GetById(EntityGuidConverter.ConvertToGuid(note.Id));
-            if (noteUpdated == null)
-                return EntityNotFoundResult<Notes>(note.Id);
-
-            noteUpdated.Content = note.Content;
-
-            noteRepository.Update(noteUpdated);
-            UnitOfWork.SaveChanges();
-
-            var resultEntry = GetNote(EntityGuidConverter.ConvertToPrefixedGuid(typeof(Notes), noteUpdated.Id));
-            return SuccessResult(resultEntry);
-        }
-
-        public IServiceResult DeleteNote(string id)
-        {
-            var noteRepository = UnitOfWork.GetRepository<Notes>();
-            var noteToDelete = noteRepository.GetById(EntityGuidConverter.ConvertToGuid(id));
+            var noteToDelete = UnitOfWork.GetRepository<Notes>().GetByIdAsync(id);
             if (noteToDelete == null)
-                return EntityNotFoundResult<Notes>(id);
+                return EntityNotFoundResult<Notes>(id.ToString());
 
-            noteRepository.Delete(noteToDelete);
-            UnitOfWork.SaveChanges();
+            UnitOfWork.GetRepository<Notes>().Delete(noteToDelete);
+            await UnitOfWork.SaveChangesAsync();
 
             var result = new { deleted = true, ID = id };
             return SuccessResult(result);
-        }
-
-        public List<NoteModel> GetNotesByUserId(string id)
-        {
-            var user = UnitOfWork.GetRepository<Users>().GetById(EntityGuidConverter.ConvertToGuid(id));
-
-            return UnitOfWork.GetRepository<Notes>().All
-                .Where(note => note.UserId == user.Id)
-                .Select(note => new
-                {
-                    note.Id,
-                    note.Content,
-                    note.CreateDate
-                }).ToList()
-                .Select(note => new NoteModel
-                {
-                    Id = EntityGuidConverter.ConvertToPrefixedGuid(typeof(Notes), note.Id),
-                    Content = note.Content,
-                    CreateDate = note.CreateDate,
-                    User = new UserModel() { Ip = user.Ip, UserName = user.UserName, BlockDate = user.BlockDate }
-                }).ToList();
         }
     }
 }

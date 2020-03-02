@@ -36,6 +36,8 @@ namespace TestNote.WEB
              options.UseSqlServer(
                  Configuration.GetConnectionString("DefaultConnection")));
 
+
+
             services.AddSignalR();
 
             // needed to load configuration from appsettings.json
@@ -50,9 +52,9 @@ namespace TestNote.WEB
             services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
 
             // inject counter and rules stores
+            services.AddSingleton(Mapping.Configuration.CreateDefaultMapper());
             services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
             services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
-            services.AddSingleton<IEntityGuidConverter, EntityGuidConverter>();
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<INoteService, NoteService>();
@@ -104,7 +106,7 @@ namespace TestNote.WEB
                 endpoints.MapHub<NoteHub>("/noteHub");
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=Home}/{action=Index}/{id?}");
+                    pattern: "{controller=Note}/{action=Index}/{id?}");
             });
         }
     }

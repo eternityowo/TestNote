@@ -1,7 +1,6 @@
 ﻿var Mmodal = "user-modal";
 var Mcontainer = "user-container";
-//var Mtable_grid = "#table-user-grid";
-//var GridTable = $(Mtable_grid);
+
 var table;
 
 $(document).ready(function () {
@@ -12,21 +11,14 @@ $(document).ready(function () {
             "url": "/User/GetList",
             "datatype": "json"
         },
-        "searchDelay": 300,
+        "searchDelay": 350,
         "createdRow": function (row, data, dataIndex) {
             var actions = $(row).children().last();
             $(actions).empty();
-            if (data.blockDate === null) {
-                //$(row).children().first().next().next().css({ "color": "red", "border": "2px solid red" });
-                $(actions).append(`<button type="button" class="btn btn-danger btn-md" data-toggle="modal" data-url="/User/Block/` + data.ip + `" id="btn-block-user">
-                                    <span class="fa fa-times" aria-hidden="true"></span> Block
-                                </button>`);
-            }
-            else {
-                $(actions).append(`<button type="button" class="btn btn-success btn-md" data-toggle="modal" data-url="/User/Unblock/` + data.ip + `" id="btn-unblock-user">
-                                    <span class="fa fa-check" aria-hidden="true"></span> Unblock
-                                </button>`);
-            }
+            var act = `<button type="button" class="btn btn-` + (data.blockDate == null ? 'danger' : 'success') + ` btn-md" data-toggle="modal" data-url="/User/ChangeUserStatus/" id="btn-change-user">
+                                    <span class="fa fa-` + (data.blockDate == null ? 'times' : 'check') + `" aria-hidden="true"></span>` + (data.blockDate == null ? 'Block' : 'Unblock') + `
+                                </button>`;
+            $(actions).append(act);
         },
         "columns": [
             {
@@ -66,7 +58,7 @@ $(document).ready(function () {
 });
 
 
-$("#table-user-grid").on("click", "#btn-details-user", function () {
+$("#table-user-grid").on("click", "#btn-change-user", function () {
 
     var url = $(this).data("url");
 
@@ -75,73 +67,13 @@ $("#table-user-grid").on("click", "#btn-details-user", function () {
             NotifyError(data);
             return;
         }
-        $('#details-' + Mcontainer).html(data);
 
-        $('#details-' + Mmodal).modal('show');
-    });
-
-});
-
-$("#table-user-grid").on("click", "#btn-edit-user", function () {
-
-    var url = $(this).data("url");
-
-    $.get(url, function (data) {
-        if (data.data === "null") {
+        if (data.data !== "success") {
             NotifyError(data);
             return;
         }
-        $('#edit-' + Mcontainer).html(data);
-
-        $('#edit-' + Mmodal).modal('show');
-        $('.chosen-select').chosen({
-            no_results_text: "Oops, nothing found!",
-            placeholder_text_multiple: "Please, select some option"
-        });
-    });
-});
-
-$("#table-user-grid").on("click", "#btn-delete-user", function () {
-
-    var url = $(this).data("url");
-
-    $.get(url, function (data) {
-        if (data.data === "null") {
-            NotifyError(data);
-            return;
-        }
-        $('#delete-' + Mcontainer).html(data);
-
-        $('#delete-' + Mmodal).modal('show');
+        Notify('fa fa-check-circle', "Success", "User status changed", "success");
+        $("#table-user-grid").DataTable().ajax.reload();
     });
 
 });
-
-function DeleteUserSuccess(data) {
-
-    if (data.data != "success") {
-        $('#delete-' + Mcontainer).html(data.data);
-        NotifyError(data);
-        $('#loader').removeClass('loading');
-        return;
-    }
-    Notify('fa fa-check-circle', "Success", "Deleted!", "success");
-    $('#delete-' + Mmodal).modal('hide');
-    $('#loader').removeClass('loading');
-    $('#delete-' + Mcontainer).html("");
-    $("#table-user-grid").DataTable().ajax.reload();
-}
-
-function UpdateUserSuccess(data) {
-    if (data.data != "success") {
-        $('#edit-' + Mcontainer).html(data.data);
-        NotifyError(data);
-        $('#loader').removeClass('loading');
-        return;
-    }
-    Notify('fa fa-check-circle', "Success", "Video was updated!", "success");
-    $('#edit-' + Mmodal).modal('hide');
-    $('#loader').removeClass('loading');
-    $('#edit-' + Mcontainer).html("");
-    $("#table-user-grid").DataTable().ajax.reload();
-}

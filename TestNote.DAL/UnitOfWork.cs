@@ -15,7 +15,6 @@ namespace TestNote.DAL
     {
         private readonly DbContext _context;
         private readonly IDictionary<Type, IBaseRepository> _repositories;
-        private readonly object _lockObject = new object();
 
         public UnitOfWork(DbContext context)
         {
@@ -23,7 +22,7 @@ namespace TestNote.DAL
             _context = context;
         }
 
-        public IBaseRepository<T> GetRepository<T>()
+        public IBaseRepository<T> GetRepository<T>() where T : class
         {
             //Check if repository exist in cache
             if (_repositories.ContainsKey(typeof(T)))
@@ -37,72 +36,9 @@ namespace TestNote.DAL
             return repository;
         }
 
-        public void RollBack()
-        {
-            var changedEntries = _context.ChangeTracker.Entries().Where(x => x.State != EntityState.Unchanged).ToList();
+        public Task<int> SaveChangesAsync() => _context.SaveChangesAsync();
+        public int SaveChanges() => _context.SaveChanges();
 
-            foreach (var entry in changedEntries.Where(x => x.State == EntityState.Modified))
-            {
-                entry.CurrentValues.SetValues(entry.OriginalValues);
-                entry.State = EntityState.Unchanged;
-            }
-
-            foreach (var entry in changedEntries.Where(x => x.State == EntityState.Added))
-            {
-                entry.State = EntityState.Detached;
-            }
-
-            foreach (var entry in changedEntries.Where(x => x.State == EntityState.Deleted))
-            {
-                entry.State = EntityState.Unchanged;
-            }
-        }
-        public Task<int> SaveChangesAsync()
-        {
-            var entities = ((NoteDBContext)_context).ChangeTracker
-                .Entries()
-                .Where(_ => _.State == EntityState.Added ||
-                            _.State == EntityState.Modified);
-
-            var errors = new List<ValidationResult>(); // all errors are here
-            foreach (var entity in entities)
-            {
-                var validationContext = new ValidationContext(entity);
-                Validator.TryValidateObject(entity, validationContext, errors, validateAllProperties: true);
-            }
-
-            return _context.SaveChangesAsync();
-        }
-
-        public int SaveChanges()
-        {
-            try
-            {
-                Monitor.Enter(_lockObject);
-
-                var entities = _context.ChangeTracker
-                    .Entries()
-                    .Where(_ => _.State == EntityState.Added ||
-                                _.State == EntityState.Modified);
-
-                var errors = new List<ValidationResult>(); // all errors are here
-                foreach (var entity in entities)
-                {
-                    var validationContext = new ValidationContext(entity);
-                    Validator.TryValidateObject(entity, validationContext, errors, validateAllProperties: true);
-                }
-
-                return _context.SaveChanges();
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new DbUpdateException("Entity update failed - errors follow: " + ex.GetBaseException().Message, ex);
-            }
-            finally
-            {
-                Monitor.Exit(_lockObject);
-            }
-        }
 
         #region IDisposable
 

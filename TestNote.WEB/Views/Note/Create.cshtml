@@ -12,22 +12,22 @@
                   data-ajax-update="#noteTable">
                 <div class="mb-3">
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                    <label asp-for="User.UserName" class="control-label"></label>
+                    <label asp-for="UserName" class="control-label"></label>
                     <div class="input-group">
                         <div class="input-group-prepend">
                             <span class="input-group-text">@@</span>
                         </div>
-                        @{ var name = Model.User.UserName;}
+                        @{ var name = Model.UserName;}
                         @if (name != null)
                         {
-                            <input asp-for="User.UserName" class="form-control" placeholder="Username" value="@name" readonly/>
+                            <input asp-for="UserName" class="form-control" placeholder="Username" value="@name" readonly />
                         }
                         else
                         {
-                            <input asp-for="User.UserName" class="form-control" placeholder="Username" value="" />
+                            <input asp-for="UserName" class="form-control" placeholder="Username" value="" />
                         }
                     </div>
-                    <span asp-validation-for="User.UserName" class="text-danger"></span>
+                    <span asp-validation-for="UserName" class="text-danger"></span>
                     <div></div>
                     <label asp-for="Content" class="control-label"></label>
                     <div class="input-group">
@@ -35,18 +35,12 @@
                     </div>
                     <span asp-validation-for="Content" class="text-danger"></span>
                     <hr />
-                    <input asp-for="User.Ip" class="form-control" value="@Model.User.Ip" hidden />
+                    <input asp-for="UserId" class="form-control" value="@Model.UserId" hidden />
                     <div class="form-group">
                         <input type="submit" value="Create" class="btn btn-outline-primary btn-block" />
                     </div>
-                    @*<button class="btn btn-outline-primary btn-block" id="createNote" type="submit" value="Create">Create</button>*@
                 </div>
             </form>
         </div>
     </div>
 </div>
-<script>
-    function CreateNodeError() {
-        alert("RRRRRRRRRRR");
-    }
-</script>

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AutoMapper;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using TestNote.DAL.Contracts;
@@ -8,13 +9,13 @@ namespace TestNote.Service.Service
 {
     public class BaseService
     {
+        protected readonly IMapper _mapper;
         protected readonly IUnitOfWork UnitOfWork;
-        protected readonly IEntityGuidConverter EntityGuidConverter;
 
-        public BaseService(IUnitOfWork unitOfWork, IEntityGuidConverter entityGuidConverter)
+        public BaseService(IUnitOfWork unitOfWork, IMapper mapper)
         {
+            _mapper = mapper;
             UnitOfWork = unitOfWork;
-            EntityGuidConverter = entityGuidConverter;
         }
 
         protected IServiceResult EntityNotFoundResult<T>(string field, string fieldName = "id")

@@ -7,8 +7,7 @@ namespace TestNote.DAL.Contracts
 {
     public interface IUnitOfWork
     {
-        IBaseRepository<T> GetRepository<T>();
-        void RollBack();
+        IBaseRepository<T> GetRepository<T>() where T : class;
         int SaveChanges();
         Task<int> SaveChangesAsync();
     }

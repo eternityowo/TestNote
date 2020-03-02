@@ -14,7 +14,6 @@ namespace TestNote.DAL.Entities
         public string Ip { get; set; }
         public string UserName { get; set; }
         public DateTime? BlockDate { get; set; }
-
         public virtual ICollection<Notes> Notes { get; set; }
     }
 }
