@@ -106,7 +106,7 @@ namespace TestNote.WEB
                 endpoints.MapHub<NoteHub>("/noteHub");
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=Note}/{action=Index}/{id?}");
+                    pattern: "{controller=File}/{action=Index}/{id?}");
             });
         }
     }

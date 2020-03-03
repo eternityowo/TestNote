@@ -5,6 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="tessdata\eng.traineddata" />
+    <Content Remove="tessdata\pdf.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AspNetCoreRateLimit" Version="3.0.5" />
     <PackageReference Include="AutoMapper" Version="9.0.0" />
     <PackageReference Include="DataTables.AspNet.AspNetCore" Version="2.0.2" />
@@ -21,6 +26,16 @@
   <ItemGroup>
     <ProjectReference Include="..\TestNote.DAL\TestNote.DAL.csproj" />
     <ProjectReference Include="..\TestNote.Service\TestNote.Service.csproj" />
+    <ProjectReference Include="..\TestNote.Tesseract\TestNote.Tesseract.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="tessdata\eng.traineddata">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="tessdata\pdf.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
